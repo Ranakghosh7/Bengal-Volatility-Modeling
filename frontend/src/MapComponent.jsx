@@ -122,14 +122,7 @@ const MapComponent = () => {
         <section className="paper-section abstract">
           <h2>Abstract</h2>
           <p>
-            This paper presents a novel approach to election prediction using XLM-RoBERTa for real-time sentiment extraction 
-            from regional news sources. Our methodology integrates live data ingestion from NewsAPI with a weighted volatility 
-            model that accounts for historic turnout patterns. The model focuses specifically on the 16 districts comprising 
-            the April 23rd Phase of the West Bengal Assembly Elections, encompassing the critical North Bengal belt. By analyzing 
-            news momentum and sentiment signals, we provide probabilistic forecasts for each constituency. The 91% voter turnout 
-            observed in Phase 1 serves as a historic data anchor, triggering volatility adjustments that capture potential 
-            "silent voter" movements and anti-incumbency effects. Our approach demonstrates the efficacy of combining traditional 
-            polling data with real-time news sentiment analysis for election forecasting.
+            The electoral landscape of West Bengal is characterized by rapid shifts in voter mood and exceptionally high turnout, making traditional prediction models ineffective. This paper introduces a novel machine-learning framework that uses multi-modal sentiment analysis and weighted volatility modeling to forecast election results. Focusing on the critical April 23rd Phase across 16 North Bengal districts—a historical bellwether for the state—the study uses a real-time data ingestion pipeline to track news cycles. By collecting regional and national news within 72-hour windows, the system generates specific sentiment scores and momentum indicators for each district. Additionally, the model uses major events, such as the unusual 91% turnout in Phase 1, as primary volatility triggers to measure political awareness and grassroots mobilization. Ultimately, this AI-driven approach provides an impartial, data-based system for tracking political momentum in highly unpredictable election environments.
           </p>
         </section>
 
@@ -138,14 +131,11 @@ const MapComponent = () => {
         <section className="paper-section">
           <h2>1. Introduction and Methodology</h2>
           <p>
-            The electoral landscape of West Bengal presents unique challenges for predictive modeling due to its complex 
-            political dynamics and high voter engagement. This study examines the April 23rd Phase elections, which cover 
-            16 districts in the North Bengal belt, representing a critical bellwether for overall state politics.
+            The electoral landscape of West Bengal presents unique challenges for predictive modeling due to its complex political dynamics and exceptionally high voter engagement. Unlike other regions where elections are a civic duty, here, they are the ultimate adrenaline rush. To understand this, Tell me what is the most popular sport in West Bengal:
+
           </p>
           <p>
-            Our data ingestion pipeline utilizes the NewsAPI service to aggregate real-time news articles from regional 
-            and national publications. The system queries for district-specific election news within a 72-hour window, 
-            generating sentiment scores and momentum indicators for each geographic area.
+            Football Right ?!  Mohun Bagan Vs East Bengal !   Nope that's  wrong , the most popular sport is "Khela Hobe" or "The Game is On"  Its played Every Five Years, the rules chnage everyday , and the refree is always accused of cheating !!
           </p>
           <p>
             <strong>Historic Data Anchor:</strong> The 91% turnout rate observed in Phase 1 of the 2026 elections represents 
