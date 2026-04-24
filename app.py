@@ -4,6 +4,7 @@ import requests
 from datetime import datetime, timedelta
 import time
 import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
 CORS(app)
@@ -24,46 +25,85 @@ def get_cached(key):
 def set_cached(key, data):
     cache[key] = {'timestamp': time.time(), 'data': data}
 
-def fetch_live_district_data(district_name):
-    print(f"Fetching live data for {district_name}...")
+def fetch_single_news(query, district_name, query_type):
+    cache_key = get_cache_key(district_name, query_type)
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cache_key, cached
     
     from_date = (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d')
     base_url = "https://newsapi.org/v2/everything"
     
-    bjp_query = f"(BJP OR Modi) AND {district_name} AND Bengal"
-    bjp_cache_key = get_cache_key(district_name, 'bjp')
-    bjp_momentum = get_cached(bjp_cache_key)
-    if bjp_momentum is None:
-        bjp_res = requests.get(f"{base_url}?q={bjp_query}&from={from_date}&language=en&apiKey={NEWS_API_KEY}", timeout=5).json()
-        bjp_momentum = min(bjp_res.get('totalResults', 0), 10)
-        set_cached(bjp_cache_key, bjp_momentum)
+    try:
+        res = requests.get(f"{base_url}?q={query}&from={from_date}&language=en&apiKey={NEWS_API_KEY}", timeout=5).json()
+        data = res.get('totalResults', 0)
+        set_cached(cache_key, data)
+        return cache_key, data
+    except:
+        set_cached(cache_key, 0)
+        return cache_key, 0
+
+def fetch_headlines(district_name):
+    cache_key = get_cache_key(district_name, 'headlines')
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cache_key, cached
     
-    tmc_query = f"(TMC OR Mamata) AND {district_name} AND Bengal"
-    tmc_cache_key = get_cache_key(district_name, 'tmc')
-    tmc_momentum = get_cached(tmc_cache_key)
-    if tmc_momentum is None:
-        tmc_res = requests.get(f"{base_url}?q={tmc_query}&from={from_date}&language=en&apiKey={NEWS_API_KEY}", timeout=5).json()
-        tmc_momentum = min(tmc_res.get('totalResults', 0), 10)
-        set_cached(tmc_cache_key, tmc_momentum)
+    from_date = (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d')
+    base_url = "https://newsapi.org/v2/everything"
+    query = f"{district_name} AND (election OR vote) AND Bengal"
     
-    gen_query = f"{district_name} AND (election OR vote) AND Bengal"
-    gen_cache_key = get_cache_key(district_name, 'gen')
-    comments = get_cached(gen_cache_key)
-    if comments is None:
-        gen_res = requests.get(f"{base_url}?q={gen_query}&from={from_date}&language=en&sortBy=relevancy&apiKey={NEWS_API_KEY}", timeout=5).json()
-        comments = []
-        if gen_res.get('status') == 'ok' and gen_res.get('articles'):
-            for article in gen_res['articles'][:5]:
+    try:
+        res = requests.get(f"{base_url}?q={query}&from={from_date}&language=en&sortBy=relevancy&apiKey={NEWS_API_KEY}", timeout=5).json()
+        headlines = []
+        if res.get('status') == 'ok' and res.get('articles'):
+            for article in res['articles'][:5]:
                 if article.get('title'):
-                    comments.append(article['title'])
-        if not comments:
-            comments = ["Election coverage continues in the region."]
-        set_cached(gen_cache_key, comments)
+                    headlines.append(article['title'])
+        if not headlines:
+            headlines = ["Election coverage continues in the region."]
+        set_cached(cache_key, headlines)
+        return cache_key, headlines
+    except:
+        set_cached(cache_key, ["Election coverage continues in the region."])
+        return cache_key, ["Election coverage continues in the region."]
+
+def fetch_live_district_data(district_name):
+    print(f"Fetching live data for {district_name}...")
+    
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        future_bjp = executor.submit(fetch_single_news, f"(BJP OR Modi) AND {district_name} AND Bengal", district_name, 'bjp')
+        future_tmc = executor.submit(fetch_single_news, f"(TMC OR Mamata) AND {district_name} AND Bengal", district_name, 'tmc')
+        future_headlines = executor.submit(fetch_headlines, district_name)
+        
+        bjp_m = min(future_bjp.result()[1], 10)
+        tmc_m = min(future_tmc.result()[1], 10)
+        headlines = future_headlines.result()[1]
     
     return {
-        "comments": comments,
-        "bjp_m": bjp_momentum,
-        "tmc_m": tmc_momentum
+        "comments": headlines,
+        "bjp_m": bjp_m,
+        "tmc_m": tmc_m
+    }
+
+def process_district(district, turnout):
+    live_data = fetch_live_district_data(district)
+    
+    percentages = predict_with_history(
+        district,
+        comments=live_data["comments"], 
+        bjp_m=live_data["bjp_m"], 
+        tmc_m=live_data["tmc_m"], 
+        turnout=turnout
+    )
+    
+    winner = max(percentages, key=lambda k: percentages[k])
+    
+    return district, {
+        "dominating_party": winner,
+        "win_probability": percentages[winner],
+        "full_breakdown": percentages,
+        "latest_headlines": live_data["comments"] 
     }
 
 def calculate_winning_percentages(comments, bjp_momentum, tmc_momentum, turnout_pct, district_seed):
@@ -203,29 +243,14 @@ def get_phase_predictions(phase_id):
         }
     else:
         return jsonify({"error": "Invalid phase"}), 400
-
-    predictions = {}
     
-    for district, turnout in districts.items():
-        live_data = fetch_live_district_data(district)
-        
-        percentages = predict_with_history(
-            district,
-            comments=live_data["comments"], 
-            bjp_m=live_data["bjp_m"], 
-            tmc_m=live_data["tmc_m"], 
-            turnout=turnout
-        )
-        
-        winner = max(percentages, key=percentages.get)
-        
-        predictions[district] = {
-            "dominating_party": winner,
-            "win_probability": percentages[winner],
-            "full_breakdown": percentages,
-            "latest_headlines": live_data["comments"] 
-        }
-
+    predictions = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(process_district, d, t): d for d, t in districts.items()}
+        for future in as_completed(futures):
+            district, result = future.result()
+            predictions[district] = result
+    
     return jsonify({
         "phase": phase_id,
         "status": "success",
