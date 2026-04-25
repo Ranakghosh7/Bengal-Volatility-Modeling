@@ -1,7 +1,3 @@
-const fetch = (...args) => import('node-fetch').then(({
-	default: fetch
-}) => fetch(...args));
-
 const NEWS_API_KEY = process.env.NEWS_API_KEY || "2cabf2ea1e77482383ad815844529352";
 
 const FALLBACK_PREDICTIONS = {
@@ -61,8 +57,7 @@ async function fetchNews(query) {
 	try {
 		const fromDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 		const res = await fetch(
-			`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&language=en&apiKey=${NEWS_API_KEY}`,
-			{ timeout: 5000 }
+			`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&language=en&apiKey=${NEWS_API_KEY}`
 		);
 		const data = await res.json();
 		return data.totalResults || 0;
@@ -76,8 +71,7 @@ async function fetchHeadlines(district) {
 		const fromDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 		const query = `${district} AND (election OR vote) AND Bengal`;
 		const res = await fetch(
-			`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&language=en&sortBy=relevancy&apiKey=${NEWS_API_KEY}`,
-			{ timeout: 5000 }
+			`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&language=en&sortBy=relevancy&apiKey=${NEWS_API_KEY}`
 		);
 		const data = await res.json();
 		const headlines = [];
