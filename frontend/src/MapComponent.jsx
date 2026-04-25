@@ -85,7 +85,7 @@ const MapComponent = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`http://127.0.0.1:5000/api/phase/${phaseId}`);
+      const response = await axios.get(`/api/predictions?phase=${phaseId}`);
       const apiData = response.data.predictions;
       console.log("API Response:", response.data);
       
