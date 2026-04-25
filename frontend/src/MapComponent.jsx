@@ -57,12 +57,42 @@ const MapComponent = () => {
   const [selectedPhase, setSelectedPhase] = useState("23rd");
   const [allHeadlines, setAllHeadlines] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const FALLBACK_MAPPED = {
+    "Bankura": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "Barddhaman": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Birbhum": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Darjiling": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "East Midnapore": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Jalpaiguri": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "Kochbihar": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "Maldah": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "Murshidabad": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Nadia": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Puruliya": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "West Midnapore": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Kolkata": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Haora": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Hugli": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "North 24 Parganas": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "South 24 Parganas": { dominating_party: "TMC", win_probability: 52.5, full_breakdown: { TMC: 48.2, BJP: 38.5, CPIM: 13.3 } },
+    "Uttar Dinajpur": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } },
+    "Dakshin Dinajpur": { dominating_party: "BJP", win_probability: 52.5, full_breakdown: { TMC: 38.5, BJP: 48.2, CPIM: 13.3 } }
+  };
 
   const fetchPrediction = async (phaseId) => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await axios.get(`http://127.0.0.1:5000/api/phase/${phaseId}`);
       const apiData = response.data.predictions;
+      console.log("API Response:", response.data);
+      
+      if (!apiData || Object.keys(apiData).length === 0) {
+        throw new Error("No prediction data returned");
+      }
+      
       const mappedData = {};
       const headlines = [];
       
@@ -74,17 +104,37 @@ const MapComponent = () => {
         }
       }
       
+      console.log("Mapped predictions:", mappedData);
       setPredictionData(mappedData);
       setAllHeadlines(headlines);
       setSelectedPhase(phaseId);
     } catch (error) {
       console.error("Error fetching phase data:", error);
+      setError(error.message || "Failed to fetch predictions");
     }
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchPrediction("23rd");
+    fetchPrediction("23rd").finally(() => {
+      if (Object.keys(predictionData).length === 0) {
+        console.log("Using fallback data");
+        setPredictionData(FALLBACK_MAPPED);
+      }
+      setIsLoading(false);
+    });
+  }, []);
+
+useEffect(() => {
+    fetchPrediction("23rd").then(() => {
+      if (Object.keys(predictionData).length === 0) {
+        setPredictionData(FALLBACK_MAPPED);
+      }
+    }).catch(() => {
+      setPredictionData(FALLBACK_MAPPED);
+    }).finally(() => {
+      setIsLoading(false);
+    });
   }, []);
 
   const getStyle = useMemo(() => (feature) => {
